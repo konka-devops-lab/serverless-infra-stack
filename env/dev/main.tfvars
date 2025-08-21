@@ -13,16 +13,11 @@ common_vars = {
 }
 
 ########################### ACM Certificates For Backend Load Balancer & CloudFront #######################
-lb_acm = {
-  domain_name       = "dev-ecs.konkas.tech"
+acm = {
+  lb_domain_name       = "dev-ecs.konkas.tech"
+  cf_domain_name       = "dev-carvo.konkas.tech"
   validation_method = "DNS"
 }
-
-cf_acm = {
-  domain_name       = "dev-carvo.konkas.tech"
-  validation_method = "DNS"
-}
-
 ############################ ECS Task Role ###############################################################
 ecs_role = {
   role_name   = "ecs-task-role"
@@ -39,61 +34,67 @@ vpc = {
   enable_vpc_flow_logs_cw    = false
 }
 
-########################### SG Configuration #############################################################
-module "bastion_sg" {
-  source           = "../modules/sg"
-  environment      = var.common_vars["environment"]
-  application_name = var.common_vars["application_name"]
-  common_tags      = var.common_vars["common_tags"]
-  vpc_id           = module.vpc.vpc_id
-  sg_name          = var.sg["bastion_sg_name"]
-  sg_description   = var.sg["bastion_sg_description"]
-}
-module "backend_sg" {
-  source           = "../modules/sg"
-  environment      = var.common_vars["environment"]
-  application_name = var.common_vars["application_name"]
-  common_tags      = var.common_vars["common_tags"]
-  vpc_id           = module.vpc.vpc_id
-  sg_name          = var.sg["backend_sg_name"]
-  sg_description   = var.sg["backend_sg_description"]
-}
-module "elasticache_sg" {
-  source           = "../modules/sg"
-  environment      = var.common_vars["environment"]
-  application_name = var.common_vars["application_name"]
-  common_tags      = var.common_vars["common_tags"]
-  vpc_id           = module.vpc.vpc_id
-  sg_name          = var.sg["elasticache_sg_name"]
-  sg_description   = var.sg["elasticache_sg_description"]
-}
-module "rds_sg" {
-  source           = "../modules/sg"
-  environment      = var.common_vars["environment"]
-  application_name = var.common_vars["application_name"]
-  common_tags      = var.common_vars["common_tags"]
-  vpc_id           = module.vpc.vpc_id
-  sg_name          = var.sg["rds_sg_name"]
-  sg_description   = var.sg["rds_sg_description"]
-}module "alb_sg" {
-  source           = "../modules/sg"
-  environment      = var.common_vars["environment"]
-  application_name = var.common_vars["application_name"]
-  common_tags      = var.common_vars["common_tags"]
-  vpc_id           = module.vpc.vpc_id
-  sg_name          = var.sg["alb_sg_name"]
-  sg_description   = var.sg["elasticache_sg_description"]
+############################ Security Groups ###########################################################
+sg = {
+  bastion_sg_name        = "bastion-sg"
+  bastion_sg_description = "Security group for bastion host"
+  backend_sg_name        = "backend-sg"
+  backend_sg_description = "Security group for backend services"
+  elasticache_sg_name    = "elasticache-sg"
+  elasticache_sg_description = "Security group for Elasticache"
+  rds_sg_name            = "rds-sg"
+  rds_sg_description     = "Security group for RDS"
+  alb_sg_name            = "alb-sg"
+  alb_sg_description     = "Security group for Application Load Balancer"
 }
 ############################## RDS #######################################################################
-# rds = {
-#   allocated_storage   = "20"
-#   engine              = "mysql"
-#   engine_version      = "8.0"
-#   instance_class      = "db.t3.micro"
-#   publicly_accessible = false
-#   skip_final_snapshot = true
-#   storage_type        = "gp3"
-#   rds_record_name     = "dev-ecs"
-#   record_type         = "CNAME"
-#   ttl                 = "60"
-# }
+rds = {
+  allocated_storage   = "20"
+  engine              = "mysql"
+  engine_version      = "8.0"
+  instance_class      = "db.t3.micro"
+  publicly_accessible = false
+  skip_final_snapshot = true
+  storage_type        = "gp3"
+  rds_record_name     = "dev-rds"
+  record_type         = "CNAME"
+  ttl                 = "60"
+}
+############################## ElastiCache ###############################################################
+elasticache = {
+  engine                  = "valkey"
+  major_engine_version    = "8"
+  zone_id                 = "Z011675617HENPLWZ1EJC"
+  elasticache_record_name = "dev-elasticache"
+  record_type             = "CNAME"
+  ttl                     = "60"
+}
+############################## Bastion Host ##############################################################
+bastion = {
+  instance_name                  = "bastion"
+  instance_type                  = "t3.micro"
+  key_name                       = "siva"
+  monitoring                     = false
+  use_null_resource_for_userdata = true
+  remote_exec_user               = "ec2-user"
+  iam_instance_profile           = ""
+}
+############################# Backend ALB ################################################################
+alb = {
+  lb_name                    = "backend"
+  enable_deletion_protection = false
+  choose_internal_external   = false
+  enable_zonal_shift         = false
+  load_balancer_type         = "application"
+  tg_port                    = 8080
+  health_check_path          = "/health"
+  enable_http                = false
+  enable_https               = true
+  record_name                = "dev-ecs.konkas.tech"
+}
+############################ CF & S3 #####################################################################
+s3-cf = {
+  record_name = "dev-carvo.konkas.tech"
+  allowed_origins = ["https://dev-ecs.konkas.tech"]
+  aliases = ["dev-carvo.konkas.tech"]
+}

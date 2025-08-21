@@ -1,5 +1,14 @@
+locals {
+  name = "${var.environment}-${var.application_name}"
+}
 resource "aws_s3_bucket" "this" {
-  bucket = var.bucket_name
+  bucket = "${local.name}-s3-bucket"
+  tags = merge(
+    {
+    Name        = "${local.name}-s3-bucket"
+    },
+    var.common_tags
+    )
 }
 
 resource "aws_s3_bucket_public_access_block" "this" {
@@ -28,7 +37,7 @@ resource "aws_s3_bucket_versioning" "versioning_example" {
   }
 }
 resource "aws_cloudfront_origin_access_control" "this" {
-  name                              = "${var.bucket_name}-oac"
+  name                              = "${local.name}-s3-bucket-oac"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -48,6 +57,7 @@ resource "aws_cloudfront_distribution" "this" {
 
     origin_access_control_id = aws_cloudfront_origin_access_control.this.id
   }
+  
 
   default_cache_behavior {
     target_origin_id       = "s3Origin"
@@ -74,13 +84,23 @@ resource "aws_cloudfront_distribution" "this" {
     }
   }
 
-  viewer_certificate {
-    cloudfront_default_certificate = true
+  
+    viewer_certificate {
+    cloudfront_default_certificate = false
+    acm_certificate_arn            = var.acm_certificate_arn
+    ssl_support_method             = "sni-only"
+    minimum_protocol_version       = "TLSv1.2_2021"
   }
+  
 
   aliases = var.aliases
 }
+resource "null_resource" "invalidate_cloudfront" {
 
+    provisioner "local-exec" {
+    command = "aws cloudfront create-invalidation --distribution-id ${aws_cloudfront_distribution.this.id} --paths /*"
+  }
+}
 resource "aws_s3_bucket_policy" "this" {
   bucket = aws_s3_bucket.this.id
 
@@ -112,7 +132,7 @@ resource "aws_route53_record" "www" {
   type    = "A"
 
   alias {
-    name                   = aws_cloudfront_distribution.this.name
+    name                   = aws_cloudfront_distribution.this.domain_name
     zone_id                = "Z2FDTNDATAQYW2"
     evaluate_target_health = true
   }

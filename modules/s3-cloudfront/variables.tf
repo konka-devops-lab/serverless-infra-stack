@@ -1,6 +1,15 @@
-variable "bucket_name" {
-  description = "The name of the S3 bucket"
+variable "environment" {
+  description = "The environment for the resources (e.g., dev, staging, prod)"
   type        = string
+}
+variable "application_name" {
+  description = "The name of the application"
+  type        = string
+}
+variable "common_tags" {
+  description = "Common tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 }
 
 variable "aliases" {
@@ -9,14 +18,12 @@ variable "aliases" {
   default     = []
 }
 
-variable "zone_id" {
+variable "acm_certificate_arn" {
   
 }
 
-variable "record_name" {
-  
-}
+variable "zone_id" {}
 
-variable "allowed_origins" {
-  
-}
+variable "record_name" {}
+
+variable "allowed_origins" {}

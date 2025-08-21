@@ -1,6 +1,10 @@
 variable "common_vars" {}
-variable "lb_acm" {}
-variable "cf_acm" {}
+variable "acm" {}
 variable "ecs_role" {}
 variable "vpc" {}
-# variable "rds" {}
+variable "sg" {}
+variable "rds" {}
+variable "elasticache" {}
+variable "bastion" {}
+variable "alb" {}
+variable "s3-cf" {}
